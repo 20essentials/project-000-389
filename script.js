@@ -35,16 +35,25 @@ function resizeCanvas() {
   h = canvas.height = window.innerHeight;
 }
 
-function mouseMove(e) {
-  mouse.x = e.x;
-  mouse.y = e.y;
+function spawn(x, y) {
+  mouse.x = x;
+  mouse.y = y;
 
   for (let i = 0; i < 3; i++) {
     balls.push(new Ball());
   }
 }
 
-function mouseOut() {
+function pointerMove(e) {
+  spawn(e.clientX, e.clientY);
+}
+
+function touchMove(e) {
+  const t = e.touches[0];
+  spawn(t.clientX, t.clientY);
+}
+
+function clearPointer() {
   mouse.x = undefined;
   mouse.y = undefined;
 }
@@ -57,15 +66,10 @@ function initAll() {
 function initDraw() {
   context.clearRect(0, 0, w, h);
   context.globalCompositeOperation = 'lighter';
+
   drawBalls();
 
-  let temp = [];
-  for (let i = 0; i < balls.length; i++) {
-    if (balls[i].time <= balls[i].timeToLive) {
-      temp.push(balls[i]);
-    }
-  }
-  balls = temp;
+  balls = balls.filter(b => b.time <= b.timeToLive);
 
   requestAnimationFrame(initDraw);
 }
@@ -74,29 +78,6 @@ function drawBalls() {
   for (let i = 0; i < balls.length; i++) {
     balls[i].update();
     balls[i].draw();
-  }
-}
-
-function touchInit(e) {
-  window.addEventListener('touchmove', touchMove);
-  window.addEventListener('touchend', touchEnd);
-
-  function touchMove(e) {
-    const { clientX: x, clientY: y } = e.touches[0];
-    mouse.x = x;
-    mouse.y = y;
-    console.log(balls.length)
-
-    for (let i = 0; i < 3; i++) {
-      balls.push(new Ball());
-    }
-  }
-
-  function touchEnd() {
-    mouse.x = undefined;
-    mouse.y = undefined;
-    window.removeEventListener('touchmove', touchMove);
-    window.removeEventListener('touchend', touchEnd);
   }
 }
 
@@ -133,15 +114,18 @@ class Ball {
     if (this.time <= this.timeToLive) {
       let progress = 1 - (this.timeToLive - this.time) / this.timeToLive;
       this.size = this.start.size * (1 - easeOut(progress));
-      this.x = this.x + (this.end.x - this.x) * 0.01;
-      this.y = this.y + (this.end.y - this.y) * 0.01;
+      this.x += (this.end.x - this.x) * 0.01;
+      this.y += (this.end.y - this.y) * 0.01;
     }
     this.time++;
   }
 }
 
 window.addEventListener('resize', resizeCanvas);
-window.addEventListener('mousemove', mouseMove);
-window.addEventListener('mouseout', mouseOut);
+window.addEventListener('pointermove', pointerMove);
+window.addEventListener('pointerleave', clearPointer);
+
+window.addEventListener('touchmove', touchMove, { passive: true });
+window.addEventListener('touchend', clearPointer);
+
 window.addEventListener('DOMContentLoaded', initAll);
-window.addEventListener('touchstart', touchInit);
